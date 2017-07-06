@@ -55,10 +55,6 @@
               }
             },
             {
-              "type": "icon",
-              "iconType": "right_arrow"
-            },
-            {
               "type": "text",
               "key": "orders-api-repo_url"
             },
