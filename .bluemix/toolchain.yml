@@ -10,8 +10,6 @@ template:
   icon: icon.svg
   required:
     - ui-build
-    - orders-api-build
-    - orders-api-repo
     - ui-repo
   info:
     git url: >-
@@ -23,31 +21,6 @@ toolchain:
     getting_started:
       $ref: "#/messages/template.gettingStarted"
 services:
-  orders-api-build:
-    service_id: pipeline
-    parameters:
-      services:
-        - orders-api-repo
-        - test
-      name: 'orders-api-{{toolchain.name}}'
-      configuration:
-        content:
-          $text: order-api.pipeline.yml
-        env:
-          DEV_REGION_ID: '{{form.pipeline.parameters.dev-region}}'
-          SAUCE_LABS: test
-          LOGICAL_APP_NAME: Store Orders API
-          CF_APP_NAME: '{{form.pipeline.parameters.orders-app-name}}'
-          DEV_SPACE_NAME: '{{form.pipeline.parameters.dev-space}}'
-          DEV_ORG_NAME: '{{form.pipeline.parameters.dev-organization}}'
-          ORDER_API_REPO: orders-api-repo
-          QA_SPACE_NAME: '{{form.pipeline.parameters.qa-space}}'
-          QA_ORG_NAME: '{{form.pipeline.parameters.qa-organization}}'
-          QA_REGION_ID: '{{form.pipeline.parameters.qa-region}}'
-          PROD_SPACE_NAME: '{{form.pipeline.parameters.prod-space}}'
-          PROD_ORG_NAME: '{{form.pipeline.parameters.prod-organization}}'
-          PROD_REGION_ID: '{{form.pipeline.parameters.prod-region}}'
-        execute: true
   ui-repo:
     service_id: githubpublic
     parameters:
@@ -82,14 +55,6 @@ services:
           PROD_ORG_NAME: '{{form.pipeline.parameters.prod-organization}}'
           PROD_REGION_ID: '{{form.pipeline.parameters.prod-region}}'
         execute: true
-  orders-api-repo:
-    service_id: githubpublic
-    parameters:
-      repo_name: '{{form.githubpublic.parameters.orders-api-repo_name}}'
-      repo_url: '{{form.githubpublic.parameters.orders-api-repo_url}}'
-      type: clone
-      has_issues: false
-      enable_traceability: true
   messaging:
     service_id: slack
     $ref: slack.yml
@@ -110,14 +75,11 @@ form:
       dev-space: dev
       qa-space: qa
       prod-space: prod
-      orders-app-name: '{{services.orders-api-repo.parameters.repo_name}}'
       ui-app-name: '{{services.ui-repo.parameters.repo_name}}'
     schema:
       $ref: deploy.json
   githubpublic:
     parameters:
-      orders-api-repo_name: 'orders-api-{{toolchain.name}}'
-      orders-api-repo_url: 'https://github.com/open-toolchain/Microservices_OrdersAPI'
       ui-repo_name: 'ui-{{toolchain.name}}'
       ui-repo_url: 'https://github.com/open-toolchain/Microservices_UI'
     schema:
