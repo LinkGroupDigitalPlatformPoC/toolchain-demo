@@ -10,9 +10,7 @@ template:
   icon: icon.svg
   required:
     - ui-build
-    - catalog-api-build
     - orders-api-build
-    - catalog-api-repo
     - orders-api-repo
     - ui-repo
   info:
@@ -50,14 +48,6 @@ services:
           PROD_ORG_NAME: '{{form.pipeline.parameters.prod-organization}}'
           PROD_REGION_ID: '{{form.pipeline.parameters.prod-region}}'
         execute: true
-  catalog-api-repo:
-    service_id: githubpublic
-    parameters:
-      repo_name: '{{form.githubpublic.parameters.catalog-api-repo_name}}'
-      repo_url: '{{form.githubpublic.parameters.catalog-api-repo_url}}'
-      type: clone
-      has_issues: false
-      enable_traceability: true
   ui-repo:
     service_id: githubpublic
     parameters:
@@ -85,31 +75,6 @@ services:
           DEV_SPACE_NAME: '{{form.pipeline.parameters.dev-space}}'
           DEV_ORG_NAME: '{{form.pipeline.parameters.dev-organization}}'
           UI_REPO: ui-repo
-          QA_SPACE_NAME: '{{form.pipeline.parameters.qa-space}}'
-          QA_ORG_NAME: '{{form.pipeline.parameters.qa-organization}}'
-          QA_REGION_ID: '{{form.pipeline.parameters.qa-region}}'
-          PROD_SPACE_NAME: '{{form.pipeline.parameters.prod-space}}'
-          PROD_ORG_NAME: '{{form.pipeline.parameters.prod-organization}}'
-          PROD_REGION_ID: '{{form.pipeline.parameters.prod-region}}'
-        execute: true
-  catalog-api-build:
-    service_id: pipeline
-    parameters:
-      services:
-        - catalog-api-repo
-        - test
-      name: 'catalog-api-{{toolchain.name}}'
-      configuration:
-        content:
-          $text: catalog-api.pipeline.yml
-        env:
-          DEV_REGION_ID: '{{form.pipeline.parameters.dev-region}}'
-          SAUCE_LABS: test
-          LOGICAL_APP_NAME: Store Catalog API
-          CF_APP_NAME: '{{form.pipeline.parameters.catalog-app-name}}'
-          DEV_SPACE_NAME: '{{form.pipeline.parameters.dev-space}}'
-          DEV_ORG_NAME: '{{form.pipeline.parameters.dev-organization}}'
-          CATALOG_API_REPO: catalog-api-repo
           QA_SPACE_NAME: '{{form.pipeline.parameters.qa-space}}'
           QA_ORG_NAME: '{{form.pipeline.parameters.qa-organization}}'
           QA_REGION_ID: '{{form.pipeline.parameters.qa-region}}'
@@ -146,14 +111,11 @@ form:
       qa-space: qa
       prod-space: prod
       orders-app-name: '{{services.orders-api-repo.parameters.repo_name}}'
-      catalog-app-name: '{{services.catalog-api-repo.parameters.repo_name}}'
       ui-app-name: '{{services.ui-repo.parameters.repo_name}}'
     schema:
       $ref: deploy.json
   githubpublic:
     parameters:
-      catalog-api-repo_name: 'catalog-api-{{toolchain.name}}'
-      catalog-api-repo_url: 'https://github.com/open-toolchain/Microservices_CatalogAPI'
       orders-api-repo_name: 'orders-api-{{toolchain.name}}'
       orders-api-repo_url: 'https://github.com/open-toolchain/Microservices_OrdersAPI'
       ui-repo_name: 'ui-{{toolchain.name}}'
