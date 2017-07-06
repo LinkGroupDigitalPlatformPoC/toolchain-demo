@@ -1,0 +1,318 @@
+---
+stages:
+- name: Build
+  inputs:
+  - type: git
+    branch: master
+    service: ${UI_REPO}
+
+  properties:
+  - name: LOGICAL_APP_NAME
+    value: ${LOGICAL_APP_NAME}
+    type: text
+  - name: BUILD_PREFIX
+    value: master
+    type: text
+  - name: EXTENSION_DEBUG
+    value: '1'
+    type: text
+  jobs:
+  - name: Unit tests
+    type: tester
+    enable_tests: true
+    test_file_pattern: target/surefire-reports/*.xml
+    extension_id: ibm.devops.services.pipeline.dra_upload_results
+    ADDITIONAL_LIFE_CYCLE_STAGE_SELECT: none
+    COMMAND: "#!/bin/bash\nexport JAVA_HOME=/opt/IBM/java8\n\nmvn -B test \n\n#List\
+      \ the contents of the current directory\n#ls -alt\n\n#List the contents of the\
+      \ surefire-reports directory\n#echo \"switching to the surefire reports directory\"\
+      \n#cd target/surefire-reports\n#ls -atl\n\n#echo -e \"\\nSwitching back to base\
+      \ directory\"\n#cd ../..\n"
+    LIFE_CYCLE_STAGE_SELECT: unittest
+    LOG_FILE: target/surefire-reports/*.xml
+  - name: Build
+    type: builder
+    artifact_dir: target
+    build_type: maven
+    script: |+
+      #!/bin/bash
+      export JAVA_HOME=/opt/IBM/java8
+
+      #Skip the test execution as they have already been executed in the first job - Unit tests
+      #Copy the manifest file to the target directory
+      #Copy the postman test files (test and environment config files)
+      mvn -B package -Dmaven.test.skip=true && cp manifest.yml target/ && cp src/test/postman/*.json target/
+
+  - name: Check UnitTest Success Percentage
+    type: tester
+    extension_id: ibm.devops.services.pipeline.dra_devops_gate
+    CRITERIA: Member Mgmt Services - Unit Tests Only
+  - name: Static Code Analysis
+    type: tester
+    extension_id: ibm.devops.services.pipeline.appscan.static.builder
+    target:
+      region_id: ibm:yp:us-south
+      organization: Manglu-IBM-Org
+      space: linkgrouppoc-dev
+    WAIT_TIME: '5'
+    SETUP_SERVICE_SPACE: 'false'
+- name: DEV
+  inputs:
+  - type: job
+    stage: Build
+    job: Build
+    dir_name: null
+  triggers:
+  - type: stage
+  properties:
+  - name: LOGICAL_ENV_NAME
+    value: ${DEV_SPACE_NAME}
+    type: text
+  - name: LOGICAL_APP_NAME
+    value: ${LOGICAL_APP_NAME}
+    type: text
+  - name: BUILD_PREFIX
+    value: master
+    type: text
+  - name: EXTENSION_DEBUG
+    value: '1'
+    type: text
+  jobs:
+  - name: Deploy
+    type: deployer
+    target:
+      region_id: ${DEV_REGION_ID}
+      organization: ${DEV_ORG_NAME}
+      space: ${DEV_SPACE_NAME}
+      application: ${CF_APP_NAME}
+    script: "#!/bin/bash\n\n# Push app (no start)\nexport CF_APP_NAME=\"dev-$CF_APP\"\
+      \ncf push \"${CF_APP_NAME}\" --no-start\n\n#Set the profile that is used in\
+      \ this space- Retrieve it from environment variable\n#instead of hardcoding\
+      \ it within the script\ncf set-env ${CF_APP_NAME} JAVA_OPTS \"-Dspring.profiles.active=dev\"\
+      \n\n#Start the app as we specified no-start when the CF PUSH was executed\n\
+      cf start ${CF_APP_NAME}\n\n "
+- name: TEST/STAGING
+  inputs:
+  - type: job
+    stage: Build
+    job: Build
+    dir_name: null
+  triggers:
+  - type: stage
+  properties:
+  - name: LOGICAL_ENV_NAME
+    value: STAGING
+    type: text
+  - name: LOGICAL_APP_NAME
+    value:  ${LOGICAL_APP_NAME}
+    type: text
+  - name: BUILD_PREFIX
+    value: master
+    type: text
+  - name: EXTENSION_DEBUG
+    value: '1'
+    type: text
+  jobs:
+  - name: Staging Gate
+    type: tester
+    extension_id: ibm.devops.services.pipeline.dra_devops_gate
+    CRITERIA: Member Mgmt Services - 100 Percent Unit Tests Success
+  - name: Deploy
+    type: deployer
+    target:
+      region_id: ibm:yp:us-south
+      organization: Manglu-IBM-Org
+      space: linkgrouppoc-test
+      application: member-mgmt-services
+    script: "#!/bin/bash\n\n# Push app (no start)\nexport CF_APP_NAME=\"test-$CF_APP\"\
+      \ncf push \"${CF_APP_NAME}\" --no-start\n\n#Set the profile that is used in\
+      \ this space- Retrieve it from environment variable\n#instead of hardcoding\
+      \ it within the script\ncf set-env ${CF_APP_NAME} JAVA_OPTS \"-Dspring.profiles.active=test\"\
+      \n\n#Start the app as we specified no-start when the CF PUSH was executed\n\
+      cf start ${CF_APP_NAME}\n\n "
+  - name: Newman API Functional tests
+    type: tester
+    enable_tests: true
+    test_file_pattern: ./newmanreport.xml
+    extension_id: ibm.devops.services.pipeline.dra_upload_results
+    ADDITIONAL_LIFE_CYCLE_STAGE_SELECT: none
+    COMMAND: "#!/bin/bash\n\n#!/bin/bash\n\nexport NVM_DIR=/home/pipeline/nvm\nexport\
+      \ NODE_VERSION=7.0.0\nexport NVM_VERSION=0.33.0\n\nnpm config delete prefix\
+      \ \\\n  && curl https://raw.githubusercontent.com/creationix/nvm/v${NVM_VERSION}/install.sh\
+      \ | sh \\\n  && . $NVM_DIR/nvm.sh \\\n  && nvm install $NODE_VERSION \\\n  &&\
+      \ nvm alias default $NODE_VERSION \\\n  && nvm use default \\\n  && node -v\
+      \ \\\n  && npm -v \n\nnpm install\n\nnpm install newman --global;\n\n# invoke\
+      \ tests here\n#Using newman to test the APIs exposed by the microservices app\n\
+      #Asking it to generate a specific output file -newmanreport.xml in the current\
+      \ directory\n\nnewman run member-mgmt-services-apitest.postman_collection.json\
+      \ -e member-mgmt-services-apitest.postman_environment-test.json  --reporter-junit-export\
+      \ newmanreport.xml --reporter junit\n\n#Listing the file contents after the\
+      \ test execution\nls -alt"
+    LIFE_CYCLE_STAGE_SELECT: fvt
+    LOG_FILE: ./newmanreport.xml
+- name: PRODUCTION
+  inputs:
+  - type: job
+    stage: Build
+    job: Build
+    dir_name: null
+  properties:
+  - name: LOGICAL_APP_NAME
+    value: Member Management
+    type: text
+  - name: LOGICAL_ENV_NAME
+    value: PRODUCTION
+    type: text
+  - name: EXTENSION_DEBUG
+    value: '1'
+    type: text
+  - name: BUILD_PREFIX
+    value: master
+    type: text
+  jobs:
+  - name: Prod Gate
+    type: tester
+    extension_id: ibm.devops.services.pipeline.dra_devops_gate
+    CRITERIA: Member Mgmt Services - 100 Percent Functional Tests Success
+  - name: Blue/Green Deploy
+    type: deployer
+    target:
+      region_id: ${PROD_REGION_ID}
+      organization: ${PROD_ORG_NAME}
+      space: ${PROD_SPACE_NAME}
+      application: ${CF_APP_NAME}
+    script: "#!/bin/bash\n\nif ! cf app $CF_APP; then\n  cf push $CF_APP --no-start\n\
+      \  cf set-env ${CF_APP} JAVA_OPTS \"-Dspring.profiles.active=prod\" \n  cf start\
+      \ ${CF_APP}\nelse\n  OLD_CF_APP=${CF_APP}-OLD-$(date +\"%s\")\n  rollback()\
+      \ {\n    set +e\n    if cf app $OLD_CF_APP; then\n      cf logs $CF_APP --recent\n\
+      \      cf delete $CF_APP -f\n      cf rename $OLD_CF_APP $CF_APP\n    fi\n \
+      \   exit 1\n  }\n  set -e\n  trap rollback ERR\n  cf rename $CF_APP $OLD_CF_APP\n\
+      \  cf push $CF_APP --no-start\n  cf set-env ${CF_APP} JAVA_OPTS \"-Dspring.profiles.active=prod\"\
+      \ \n  cf start ${CF_APP}\n  cf delete $OLD_CF_APP -f\nfi"
+- name: Create Incidents
+  inputs:
+  - type: job
+    stage: Build
+    job: Build
+    dir_name: null
+  jobs:
+  - name: Deploy
+    type: deployer
+    target:
+      region_id: ibm:yp:us-south
+      organization: Manglu-IBM-Org
+      space: linkgrouppoc-test
+      application: member-mgmt-services
+    script: "#!/bin/bash\n\n#Remove this line before...\n#This is just to simulate\
+      \ the PagerDuty Integration\nLetthisfail\n\n\n\n# Push app (no start)\nexport\
+      \ CF_APP_NAME=\"test-$CF_APP\"\ncf push \"${CF_APP_NAME}\" --no-start\n\n#Set\
+      \ the profile that is used in this space- Retrieve it from environment variable\n\
+      #instead of hardcoding it within the script\ncf set-env ${CF_APP_NAME} JAVA_OPTS\
+      \ \"-Dspring.profiles.active=test\"\n\n#Start the app as we specified no-start\
+      \ when the CF PUSH was executed\ncf start ${CF_APP_NAME}\n\n \n"
+  - name: Newman API tests
+    type: tester
+    script: |-
+      #!/bin/bash
+      # invoke tests here
+      #Using newman to test the APIs exposed by the microservices app
+
+      newman run member-mgmt-services-apitest.postman_collection.json -e member-mgmt-services-apitest.postman_environment-test.json
+
+      #
+      #
+    enable_tests: true
+    test_file_pattern: tests/TEST-*.xml
+  - name: Sauce Labs Tests
+    type: tester
+    extension_id: ibm.devops.services.pipeline.saucelabs
+    target:
+      region_id: ibm:yp:us-south
+      organization: Manglu-IBM-Org
+      space: linkgrouppoc-test
+    DL_ASSETS: 'true'
+    COMMAND: |-
+      #!/bin/bash
+      GRUNTFILE="tests/Gruntfile.js"
+      if [ -f $GRUNTFILE ]; then
+        npm install
+        echo $APP_URL | grep "stage1"
+        if [ $? -eq 0 ]; then
+          grunt test_fake --gruntfile $GRUNTFILE --base .
+        else
+          grunt test_real --gruntfile $GRUNTFILE --base .
+        fi
+      else
+        echo "$GRUNTFILE not found."
+      fi
+    SELECT_CMD: custom
+  - name: Functional Tests
+    type: tester
+    extension_id: ibm.devops.services.pipeline.dra_upload_results
+    ADDITIONAL_LIFE_CYCLE_STAGE_SELECT: none
+    COMMAND: |-
+      #!/bin/bash
+      GRUNTFILE="tests/Gruntfile.js"
+      if [ -f $GRUNTFILE ]; then
+        npm install
+        echo $APP_URL | grep "stage1"
+        if [ $? -eq 0 ]; then
+          grunt test_fake --gruntfile $GRUNTFILE --base .
+        else
+          grunt test_real --gruntfile $GRUNTFILE --base .
+        fi
+      else
+        echo "$GRUNTFILE not found."
+      fi
+    LIFE_CYCLE_STAGE_SELECT: fvt
+    LOG_FILE: ./xunit.xml
+- name: PRODUCTION [copy]
+  inputs:
+  - type: job
+    stage: Build
+    job: Build
+    dir_name: null
+  jobs:
+  - name: Production Gate
+    type: tester
+    enable_tests: true
+    test_file_pattern: tests/TEST-*.xml
+    extension_id: ibm.devops.services.pipeline.dra_devops_gate
+    CRITERIA: PRODUCTION Deployment Checks (func test only)
+    ENVIRONMENT: test
+  - name: Blue/Green Deploy
+    type: deployer
+    target:
+      region_id: ibm:yp:us-south
+      organization: Manglu-IBM-Org
+      space: linkgrouppoc-prod
+      application: member-mgmt-services
+    script: |-
+      #!/bin/bash
+
+      cf set-env ${CF_APP} JAVA_OPTS "-Dspring.profiles.active=prod"
+
+      if ! cf app $CF_APP; then
+        cf push $CF_APP
+      else
+        OLD_CF_APP=${CF_APP}-OLD-$(date +"%s")
+        rollback() {
+          set +e
+          if cf app $OLD_CF_APP; then
+            cf logs $CF_APP --recent
+            cf delete $CF_APP -f
+            cf rename $OLD_CF_APP $CF_APP
+          fi
+          exit 1
+        }
+        set -e
+        trap rollback ERR
+        cf rename $CF_APP $OLD_CF_APP
+        cf push $CF_APP
+        cf delete $OLD_CF_APP -f
+      fi
+hooks:
+- enabled: true
+  label: null
+  ssl_enabled: false
+  url: https://devops-api.ng.bluemix.net/v1/messaging/webhook/publish
