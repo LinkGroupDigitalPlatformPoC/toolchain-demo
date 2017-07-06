@@ -35,7 +35,7 @@ services:
       services:
         - ui-repo
         - test
-      name: 'ui-{{toolchain.name}}'
+      name: 'demo-{{toolchain.name}}'
       ui-pipeline: true
       configuration:
         content:
