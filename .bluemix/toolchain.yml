@@ -43,7 +43,7 @@ services:
         env:
           DEV_REGION_ID: '{{form.pipeline.parameters.dev-region}}'
           SAUCE_LABS: test
-          LOGICAL_APP_NAME: Store UI
+          LOGICAL_APP_NAME: Demo App
           CF_APP_NAME: '{{form.pipeline.parameters.ui-app-name}}'
           DEV_SPACE_NAME: '{{form.pipeline.parameters.dev-space}}'
           DEV_ORG_NAME: '{{form.pipeline.parameters.dev-organization}}'
