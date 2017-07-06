@@ -80,7 +80,7 @@ form:
       $ref: deploy.json
   githubpublic:
     parameters:
-      ui-repo_name: 'ui-{{toolchain.name}}'
-      ui-repo_url: 'https://github.com/open-toolchain/Microservices_UI'
+      ui-repo_name: 'demo-{{toolchain.name}}'
+      ui-repo_url: 'https://github.com/LinkGroupDigitalPlatformPoC/aaspire-membermgmt-service'
     schema:
       $ref: github.json
