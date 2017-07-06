@@ -50,13 +50,6 @@
             "description": "The bluemix space",
             "type": "string"
         },
-        "orders-app-name": {
-            "description": {
-                "$ref": "#/messages/deploy.appDescription1"
-            },
-            "type": "string",
-            "pattern": "\\S"
-        },
         "ui-app-name": {
             "description": {
                 "$ref": "#/messages/deploy.appDescription3"
@@ -75,21 +68,12 @@
         "prod-region",
         "prod-organization",
         "prod-space",
-        "orders-app-name",
         "ui-app-name"
     ],
     "form": [
         {
             "type": "validator",
             "url": "/devops/setup/bm-helper/helper.html"
-        },
-        {
-            "type": "text",
-            "readonly": false,
-            "title": {
-                "$ref": "#/messages/deploy.appName1"
-            },
-            "key": "orders-app-name"
         },
         {
             "type": "text",
