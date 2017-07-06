@@ -39,7 +39,7 @@ services:
       ui-pipeline: true
       configuration:
         content:
-          $text: ui.pipeline.yml
+          $text: demo.pipeline.yml
         env:
           DEV_REGION_ID: '{{form.pipeline.parameters.dev-region}}'
           SAUCE_LABS: test
