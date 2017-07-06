@@ -62,6 +62,23 @@ parameters:
         ]
       },
       {
+        "name":"Member Mgmt Services - Unit Tests Only",
+        "description": "Simple Policy to check Unit Tests.",
+        "rules":[
+          {
+            "name": "Unit Test Rule",
+            "description": "Unit Test Rule",
+            "format":"xunit",
+            "stage":"unittest",
+            "percentPass":80,
+            "regressionCheck":true,
+            "criticalTests":[
+
+            ]
+          }
+        ]
+      },
+      {
         "name":"Store Functional Tests Checks",
         "description": "Composite Policy to check Functional Tests.",
         "rules":[
