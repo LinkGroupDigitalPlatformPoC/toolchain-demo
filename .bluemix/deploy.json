@@ -57,13 +57,6 @@
             "type": "string",
             "pattern": "\\S"
         },
-        "catalog-app-name": {
-            "description": {
-                "$ref": "#/messages/deploy.appDescription2"
-            },
-            "type": "string",
-            "pattern": "\\S"
-        },
         "ui-app-name": {
             "description": {
                 "$ref": "#/messages/deploy.appDescription3"
@@ -83,7 +76,6 @@
         "prod-organization",
         "prod-space",
         "orders-app-name",
-        "catalog-app-name",
         "ui-app-name"
     ],
     "form": [
@@ -98,14 +90,6 @@
                 "$ref": "#/messages/deploy.appName1"
             },
             "key": "orders-app-name"
-        },
-        {
-            "type": "text",
-            "readonly": false,
-            "title": {
-                "$ref": "#/messages/deploy.appName2"
-            },
-            "key": "catalog-app-name"
         },
         {
             "type": "text",
