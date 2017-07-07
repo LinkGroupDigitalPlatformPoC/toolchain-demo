@@ -19,6 +19,23 @@ parameters:
         ]
       },
       {
+        "name":"Member Mgmt Services - 100 Percent Unit Tests Success",
+        "description": "Simple Policy to check that 100 percent of the Unit Tests are successful.",
+        "rules":[
+          {
+            "name": "Unit Test",
+            "description": "Unit Test Rule",
+            "format":"xunit",
+            "stage":"unittest",
+            "percentPass":100,
+            "regressionCheck":true,
+            "criticalTests":[
+
+            ]
+          }
+        ]
+      },
+      {
         "name":"Store Functional Tests Checks",
         "description": "Composite Policy to check Functional Tests.",
         "rules":[
