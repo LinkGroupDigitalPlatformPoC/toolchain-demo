@@ -120,10 +120,10 @@ stages:
   - name: Deploy
     type: deployer
     target:
-      region_id: ibm:yp:us-south
-      organization: Manglu-IBM-Org
-      space: linkgrouppoc-test
-      application: member-mgmt-services
+      region_id: ${QA_REGION_ID}
+      organization: ${QA_ORG_NAME}
+      space: ${QA_SPACE_NAME}
+      application: ${CF_APP_NAME}
     script: "#!/bin/bash\n\n# Push app (no start)\nexport CF_APP_NAME=\"test-$CF_APP\"\
       \ncf push \"${CF_APP_NAME}\" --no-start\n\n#Set the profile that is used in\
       \ this space- Retrieve it from environment variable\n#instead of hardcoding\
